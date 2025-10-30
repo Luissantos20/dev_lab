@@ -23,4 +23,3 @@ Este repositório é o meu ambiente de desenvolvimento completo, onde estudo e d
    python -m venv venv
    source venv/Scripts/activate
    ```
-
