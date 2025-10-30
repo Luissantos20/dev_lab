@@ -1,6 +1,6 @@
 [project]
 name = "dev-lab-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "Dev Lab API com FastAPI"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,7 +23,7 @@ exclude = [".venv", "venv", "__pycache__", "build", "dist"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.1.0"
+version = "0.2.0"
 version_files = ["pyproject.toml:version"]
 tag_format = "v$version"
 update_changelog_on_bump = true
