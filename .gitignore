@@ -7,3 +7,7 @@ __pycache__/
 
 # Arquivos sensíveis
 .env
+
+# Requirements de segurança
+_freeze_antes_da_limpeza.txt
+requirements_backup.txt
