@@ -1,3 +1,10 @@
+## v0.4.0 (2025-12-01)
+
+### Feat
+
+- **filters**: adiciona filtros, busca e paginação ao list_tasks
+- **validation**: adiciona validações avançadas em create_task e update_task
+
 ## v0.3.0 (2025-11-19)
 
 ### Feat
