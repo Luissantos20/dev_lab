@@ -19,6 +19,16 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     """Payload para criar uma task"""
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "title": "Estudar FastAPI",
+                "description": "Aprender documentação avançada",
+                "done": False,
+            }
+        }
+    }
+
 
 # 3) Modelo de entrada para atualização (PUT) — todos opcionais
 class TaskUpdate(BaseModel):
@@ -28,7 +38,28 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = Field(default=None, max_length=500)
     done: Optional[bool] = None
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "title": "Novo título da tarefa",
+                "description": "Atualização de detalhes",
+                "done": True,
+            }
+        }
+    }
+
 
 # 4) Modelo de saída para respostas da API — inclui id
 class TaskOut(TaskBase):
     id: int = Field(..., description="Identificador único da task")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "title": "Estudar FastAPI",
+                "description": "Aprender validações, filtros e documentação",
+                "done": False,
+            }
+        }
+    }
