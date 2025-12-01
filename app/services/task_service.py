@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+from fastapi import HTTPException, status
+
 from app.schemas.task_schema import TaskCreate, TaskOut, TaskUpdate
 
 # ---------------------------
@@ -23,22 +25,55 @@ def list_tasks() -> List[TaskOut]:
 
 def create_task(payload: TaskCreate) -> TaskOut:
     """
-    Cria uma nova task a partir de um TaskCreate validado pelo Pydantic.
-    - Convertemos o payload (modelo) para dict.
-    - Geramos um id.
-    - Montamos o registro completo e validamos com TaskOut.
-    - Guardamos em memória e retornamos o objeto final.
+    Cria uma nova tarefa a partir de um objeto TaskCreate validado pelo Pydantic.
+
+    Etapas executadas:
+    - Normaliza o título e descrição removendo espaços extras.
+    - Valida título não vazio após strip().
+    - Impede criação de títulos duplicados (case-insensitive).
+    - Gera um ID único incremental.
+    - Monta os dados finais, valida com TaskOut e salva no armazenamento.
+
+    Retorna:
+        TaskOut: A tarefa criada já validada pelo schema de saída.
+
+    Lança:
+        HTTPException(400): caso o título seja vazio ou duplique outro existente.
     """
     global _next_id
 
-    data = payload.model_dump()  # Pydantic v2: vira dict tipado
-    data["id"] = _next_id
+    # --- Normalização dos campos ---
+    title = payload.title.strip()
+    description = payload.description.strip() if payload.description else None
+
+    # --- Validação: título não pode ser vazio após strip ---
+    if title == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Title cannot be empty or whitespace.",
+        )
+
+    # --- Validação: título não pode duplicar outro existente ---
+    for item in _tasks_storage:
+        if item["title"].lower() == title.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Task title already exists.",
+            )
+
+    # --- Montagem do registro limpo ---
+    data = {
+        "id": _next_id,
+        "title": title,
+        "description": description,
+        "done": payload.done,
+    }
     _next_id += 1
 
-    # Validação final: garante que o registro completo respeita o contrato
+    # --- Validação final com schema de saída ---
     task = TaskOut(**data)
 
-    # Persistência (em memória por enquanto)
+    # --- Persistência em memória ---
     _tasks_storage.append(task.model_dump())
 
     return task
@@ -60,37 +95,79 @@ def get_task(task_id: int) -> Optional[TaskOut]:
 
 def update_task(task_id: int, payload: TaskUpdate) -> Optional[TaskOut]:
     """
-    Atualiza parcialmente uma task existente.
-    - Se a task não existir, retorna None.
-    - Se existir, mescla os dados antigos com os novos,
-      valida com TaskOut, salva e retorna o objeto atualizado.
+    Atualiza parcialmente uma tarefa existente.
+
+    Etapas executadas:
+    - Procura a task pelo ID.
+    - Normaliza campos enviados (strip).
+    - Valida título não vazio após strip().
+    - Impede atualização para título duplicado (case-insensitive).
+    - Mescla dados antigos com novos.
+    - Valida o conjunto final com TaskOut.
+    - Salva no armazenamento e retorna.
+
+    Retorna:
+        TaskOut: caso a task seja atualizada.
+        None: caso a task não exista.
+
+    Lança:
+        HTTPException(400): se o título for inválido ou duplicado.
     """
-    # 1) Procurar o índice da task no storage
+    # --- 1) Procurar a task pelo ID ---
     for index, item in enumerate(_tasks_storage):
         if item["id"] == task_id:
-            # 2) Dados atuais da task
-            current_data = item
 
-            # 3) Dados enviados no payload, ignorando campos None
+            # Dados atuais da task
+            current_data = item.copy()
+
+            # Dados enviados no payload (ignorando campos não informados)
             update_data = {
                 key: value
                 for key, value in payload.model_dump().items()
                 if value is not None
             }
 
-            # 4) Mesclar os dados (os novos sobrescrevem os antigos)
+            # --- Validações avançadas ---
+
+            # Título: normalização + validações
+            if "title" in update_data:
+                new_title = update_data["title"].strip()
+
+                if new_title == "":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Title cannot be empty or whitespace.",
+                    )
+
+                # Impedir duplicidade de título (exceto a própria task)
+                for other in _tasks_storage:
+                    if (
+                        other["id"] != task_id
+                        and other["title"].lower() == new_title.lower()
+                    ):
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Task title already exists.",
+                        )
+
+                update_data["title"] = new_title
+
+            # Descrição: aplicar strip se enviada
+            if "description" in update_data and update_data["description"] is not None:
+                update_data["description"] = update_data["description"].strip()
+
+            # --- 4) Mesclar dados: novos > antigos ---
             merged_data = {**current_data, **update_data}
 
-            # 5) Validar o resultado final com TaskOut
+            # --- 5) Validar resultado final com schema de saída ---
             updated_task = TaskOut(**merged_data)
 
-            # 6) Salvar de volta no storage (como dict)
+            # --- 6) Persistir no armazenamento ---
             _tasks_storage[index] = updated_task.model_dump()
 
-            # 7) Retornar o objeto atualizado
             return updated_task
 
-    # Se não encontrar a task, retorna None
+    # Task não encontrada
     return None
 
 
