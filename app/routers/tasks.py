@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -16,13 +16,19 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[TaskOut], status_code=status.HTTP_200_OK)
-def get_tasks():
+def get_tasks(
+    done: Optional[bool] = None,
+    q: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+):
     """
-    Retorna todas as tasks salvas (em memória).
+    Lista tasks com filtros opcionais:
+    - done: filtra por status (true/false)
+    - q: busca textual no título
+    - paginação: skip e limit
     """
-    # Aqui só delegamos pro service.
-    # O router não sabe "como" listar, só pede o resultado.
-    return list_tasks()
+    return list_tasks(done=done, q=q, skip=skip, limit=limit)
 
 
 @router.get(

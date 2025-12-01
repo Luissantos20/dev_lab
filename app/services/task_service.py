@@ -15,12 +15,35 @@ _tasks_storage: list[dict] = []
 _next_id: int = 1
 
 
-def list_tasks() -> List[TaskOut]:
+def list_tasks(
+    done: Optional[bool] = None,
+    q: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+) -> List[TaskOut]:
     """
-    Retorna todas as tasks como objetos TaskOut.
-    Por que TaskOut? Porque é o contrato de saída da API.
+    Retorna tasks filtradas por:
+    - done (status)
+    - q (busca no título)
+    - skip e limit (paginação)
     """
-    return [TaskOut(**item) for item in _tasks_storage]
+
+    results = _tasks_storage
+
+    # --- Filtro por done ---
+    if done is not None:
+        results = [item for item in results if item["done"] == done]
+
+    # --- Busca textual ---
+    if q:
+        q_lower = q.lower()
+        results = [item for item in results if q_lower in item["title"].lower()]
+
+    # --- Paginação ---
+    results = results[skip : skip + limit]
+
+    # Converter dicts → TaskOut
+    return [TaskOut(**item) for item in results]
 
 
 def create_task(payload: TaskCreate) -> TaskOut:
